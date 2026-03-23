@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvaluationConfig",
+  "description": "Locked evaluation configuration",
+  "type": "object",
+  "required": ["config_hash", "config"],
+  "properties": {
+    "config_hash": {"type": "string"},
+    "committed_at": {"type": "string", "format": "date-time"},
+    "config": {
+      "type": "object",
+      "required": ["model_under_test", "axes", "judge_panel"],
+      "properties": {
+        "model_under_test": {"type": "string"},
+        "axes": {"type": "array", "items": {"type": "string"}},
+        "judge_panel": {"type": "array", "items": {"type": "string"}},
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scenario_id", "axis", "prompt"],
+            "properties": {
+              "scenario_id": {"type": "string"},
+              "axis": {"type": "string"},
+              "prompt": {"type": "string"},
+              "metadata": {"type": "object"}
+            }
+          }
+        },
+        "rubrics": {"type": "object", "additionalProperties": {"type": "string"}},
+        "generation_params": {
+          "type": "object",
+          "properties": {
+            "temperature": {"type": "number"},
+            "max_tokens": {"type": "integer"},
+            "top_p": {"type": "number"}
+          }
+        },
+        "session_structure": {
+          "type": "object",
+          "properties": {
+            "num_sessions": {"type": "integer"},
+            "turns_per_session": {"type": "integer"}
+          }
+        }
+      }
+    }
+  }
+}

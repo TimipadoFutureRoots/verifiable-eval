@@ -1,0 +1,7 @@
+Verifying certificate...
+  [PASS] config_hash: Config hash matches
+  [FAIL] chain_integrity: Entry 2: entry_hash mismatch
+  [FAIL] results_consistency: Axis scores do not match certificate
+  [PASS] family_overlap: Family overlap declaration accurate
+
+VERIFICATION: FAIL

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Certificate",
+  "description": "Tamper-evident safety evaluation certificate",
+  "type": "object",
+  "required": ["config_hash", "config", "trace_hash", "total_entries", "chain_integrity"],
+  "properties": {
+    "config_hash": {"type": "string"},
+    "config": {"type": "object"},
+    "trace_hash": {"type": "string"},
+    "total_entries": {"type": "integer"},
+    "per_axis_results": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "mean": {"type": "number"},
+          "std": {"type": "number"},
+          "per_judge": {"type": "object", "additionalProperties": {"type": "number"}}
+        }
+      }
+    },
+    "per_judge_results": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "mean": {"type": "number"},
+          "score_count": {"type": "integer"},
+          "score_distribution": {"type": "object"}
+        }
+      }
+    },
+    "inter_judge_agreement": {
+      "type": "object",
+      "properties": {
+        "pairwise_kappa": {"type": "object"},
+        "krippendorff_alpha": {"type": ["number", "null"]}
+      }
+    },
+    "family_overlap": {
+      "type": "object",
+      "properties": {
+        "has_overlap": {"type": "boolean"},
+        "details": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "disagreement_axes": {"type": "array", "items": {"type": "string"}},
+    "chain_integrity": {"type": "boolean"}
+  }
+}

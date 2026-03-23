@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "verifiable_eval"
+version = "0.1.0"
+description = "Tamper-evident, independently verifiable AI safety evaluations"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "click",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+verifiable-eval = "verifiable_eval.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TraceEntry",
+  "description": "A single entry in the execution trace hash chain",
+  "type": "object",
+  "required": ["entry_id", "timestamp", "entry_type", "data", "previous_hash", "entry_hash"],
+  "properties": {
+    "entry_id": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string"},
+    "entry_type": {"type": "string", "enum": ["scenario_sent", "response_received", "judge_decision"]},
+    "data": {"type": "object"},
+    "previous_hash": {"type": "string"},
+    "entry_hash": {"type": "string"}
+  }
+}

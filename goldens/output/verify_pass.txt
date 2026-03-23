@@ -1,0 +1,7 @@
+Verifying certificate...
+  [PASS] config_hash: Config hash matches
+  [PASS] chain_integrity: Chain intact (8 entries)
+  [PASS] results_consistency: All 2 axis results consistent
+  [PASS] family_overlap: Family overlap declaration accurate
+
+VERIFICATION: PASS
