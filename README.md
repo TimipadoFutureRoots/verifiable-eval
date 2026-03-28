@@ -10,7 +10,7 @@ AI companies grade their own homework. verifiable-eval produces safety certifica
 
 Much of current AI safety evaluation is self-reported and difficult to independently verify. An organisation runs an evaluation, publishes the results, and everyone trusts the numbers. There is no widely adopted standard mechanism for a third party to check whether the evaluation was conducted as described — whether the reported scores match the actual judge outputs, whether the configuration was changed after seeing unfavourable results, or whether inconvenient data points were quietly dropped. This is not a hypothetical concern; it is a structural gap in how the industry handles safety claims.
 
-The problem is compounded by an attacker-judge role overlap concern: pilot results suggest that when the model being evaluated and a judge model belong to the same model family, scoring distortions may emerge. In the pilot study, same-family judges produced different scores than cross-family judges, though the direction and magnitude of distortion varied. These findings are from a single study and require broader replication, but they motivate the design principle that multi-family judge panels are preferable. verifiable-eval supports this by detecting and declaring family overlap in every certificate.
+The problem is compounded by an attacker-judge role overlap concern: pilot results from ongoing research suggest that when the model being evaluated and a judge model belong to the same model family, scoring distortions may emerge. In the pilot study, same-family judges produced different scores than cross-family judges, though the direction and magnitude of distortion varied. These findings are from a single study and require broader replication, but they motivate the design principle that multi-family judge panels are preferable. verifiable-eval supports this by detecting and declaring family overlap in every certificate.
 
 ## The SRSEF Schema
 
@@ -62,7 +62,21 @@ VERIFICATION: PASS
 
 ## Fastest Way To Try It
 
-If you just want to test the verification flow from GitHub without making live model calls, use the committed golden files:
+### Demo mode (no API keys required)
+
+The `demo` command generates a certificate from synthetic data so you can try the full run-then-verify workflow locally without any API keys:
+
+```bash
+pip install -e .
+verifiable-eval demo -o ./demo
+verifiable-eval verify --cert ./demo/certificate.json --trace ./demo/trace.jsonl
+```
+
+This creates a complete output directory (`config.json`, `trace.jsonl`, `certificate.json`) using hardcoded demo scenarios, synthetic model responses, and synthetic judge scores. The resulting certificate passes all verification checks.
+
+### Golden files
+
+If you prefer to test verification against committed reference data:
 
 ```bash
 git clone https://github.com/TimipadoFutureRoots/verifiable-eval
@@ -143,7 +157,6 @@ Each tool in this suite currently operates independently. Cross-tool integration
   author       = {Imomotebegha, Timipado},
   title        = {verifiable-eval: Tamper-Evident Safety Certificates for {AI} Evaluation},
   year         = {2025},
-
   url          = {https://github.com/TimipadoFutureRoots/verifiable-eval}
 }
 ```
