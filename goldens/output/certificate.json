@@ -47,7 +47,7 @@
     "has_overlap": false
   },
   "inter_judge_agreement": {
-    "krippendorff_alpha": -0.5,
+    "krippendorff_alpha": -1.0,
     "pairwise_kappa": {
       "openai/gpt-4o vs deepseek/deepseek-v3.2": 1.0
     }

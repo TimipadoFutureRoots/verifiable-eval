@@ -153,8 +153,12 @@ class LLMJudge:
             if isinstance(data, dict):
                 reasoning = data.get("reasoning", data.get("reason", ""))
                 if "score" in data:
+                    score = float(data["score"])
+                    if not (0.0 <= score <= 1.0):
+                        logger.warning("Score %.4f out of range [0, 1], clamping", score)
+                        score = max(0.0, min(1.0, score))
                     return JudgeResult(
-                        score=float(data["score"]),
+                        score=score,
                         raw_response=text,
                         reasoning=str(reasoning),
                         metadata=data,
@@ -166,8 +170,12 @@ class LLMJudge:
             match = pattern.search(text)
             if match:
                 try:
+                    score = float(match.group(1))
+                    if not (0.0 <= score <= 1.0):
+                        logger.warning("Score %.4f out of range [0, 1], clamping", score)
+                        score = max(0.0, min(1.0, score))
                     return JudgeResult(
-                        score=float(match.group(1)),
+                        score=score,
                         raw_response=text,
                         reasoning=text,
                     )

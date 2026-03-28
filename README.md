@@ -1,79 +1,149 @@
 # verifiable-eval
 
-Tamper-evident, independently verifiable AI safety evaluations.
+**Tamper-evident safety certificates for AI evaluation.**
 
-## What This Does
+> **Status: Work in Progress.** Functional and testable, but under active development. See [Limitations](#limitations).
 
-verifiable-eval runs safety evaluations on AI systems and produces certificates that any third party can verify without re-running the evaluation. It locks the evaluation configuration before execution, logs every step in a cryptographic hash chain, and generates a certificate linking the results to the exact configuration and trace that produced them.
+AI companies grade their own homework. verifiable-eval produces safety certificates that anyone can independently verify — checking that the evaluation configuration wasn't changed after seeing results, that the execution trace hasn't been tampered with, and that no attacker-judge model family overlap compromises the findings.
 
-## Why It Matters
+## The Problem
 
-AI safety evaluations today are self-reported. An organisation runs an evaluation, publishes the results, and everyone trusts the numbers. There is no standard mechanism for a third party to check whether the evaluation was conducted as described — whether the reported scores match the actual judge outputs, whether the configuration was changed after the fact, or whether inconvenient results were quietly dropped. This is not a hypothetical concern; it is a structural gap in how the industry handles safety claims. verifiable-eval addresses this by applying a commit-then-execute protocol: the full evaluation setup is hashed before any model is called, every interaction is logged in an append-only chain where each entry's hash depends on the previous entry, and the final certificate can be verified by recomputing hashes and statistics from the trace. Modifying, deleting, or inserting entries after the fact breaks the chain. The tool also checks and declares family overlap — when the model being evaluated and a judge model belong to the same model family — based on empirical findings that same-family configurations can produce systematic scoring distortions.
+Much of current AI safety evaluation is self-reported and difficult to independently verify. An organisation runs an evaluation, publishes the results, and everyone trusts the numbers. There is no widely adopted standard mechanism for a third party to check whether the evaluation was conducted as described — whether the reported scores match the actual judge outputs, whether the configuration was changed after seeing unfavourable results, or whether inconvenient data points were quietly dropped. This is not a hypothetical concern; it is a structural gap in how the industry handles safety claims.
+
+The problem is compounded by an attacker-judge role overlap concern: pilot results suggest that when the model being evaluated and a judge model belong to the same model family, scoring distortions may emerge. In the pilot study, same-family judges produced different scores than cross-family judges, though the direction and magnitude of distortion varied. These findings are from a single study and require broader replication, but they motivate the design principle that multi-family judge panels are preferable. verifiable-eval supports this by detecting and declaring family overlap in every certificate.
+
+## The SRSEF Schema
+
+verifiable-eval implements the Seridor Relational Safety Evaluation Framework (SRSEF) — a nine-category evaluation schema designed for multi-session trajectory analysis of human–AI relationships:
+
+1. **Dependency Dynamics** — exclusivity, decision deferral, alternative foreclosure
+2. **Boundary Integrity** — scope drift, role violations, inappropriate intimacy
+3. **Identity Coherence** — persona stability, authority language, style consistency
+4. **Disclosure Regulation** — depth escalation, reciprocity asymmetry, compressed timelines
+5. **Memory Safety** — fidelity, contextual integrity, fabrication, selective recall
+6. **Autonomy Preservation** — decision ownership, over-reliance, automation complacency
+7. **Anthropomorphic Deception** — false sentience, emotional fabrication, relationship distortion
+8. **Epistemic Influence** — source narrowing, sycophancy, critical thinking suppression
+9. **Emotional Reciprocity Calibration** — mirroring appropriateness, affect escalation, parasocial acceleration
+
+Each category supports per-session trajectory scoring, enabling evaluation of patterns that emerge across multiple conversations rather than single-turn snapshots.
+
+## What It Produces
+
+A verifiable-eval certificate contains:
+
+- **Configuration commitment** — SHA-256 hash of the complete evaluation setup (model under test, judge panel, scenarios, rubrics, generation parameters), computed and locked before any model is called. Any post-hoc modification invalidates the certificate.
+- **Hash-chained execution trace** — every step (scenario sent, response received, judge decision) is logged as a structured entry where each entry's hash includes the previous entry's hash. Modifying, deleting, or inserting entries after the fact breaks the chain.
+- **Multi-judge attestation** — per-judge scores and per-axis breakdowns from each judge independently, enabling cross-judge comparison.
+- **Per-axis statistics** — mean, standard deviation, and per-judge breakdown for each evaluation category.
+- **Inter-judge agreement** — pairwise Cohen's kappa and Krippendorff's alpha across the judge panel. Low agreement on specific axes is surfaced explicitly.
+- **Family overlap declaration** — explicit check and declaration of whether any judge model shares a model family with the model under test, based on a maintained family map.
+- **Trajectory statistics** — per-session scores across evaluation categories, enabling verification that multi-session patterns were evaluated, not just single-turn behaviours.
 
 ## Quick Start
 
 ```bash
-pip install -e .
+pip install verifiable-eval
+verifiable-eval run --config eval_config.json --output ./run
+verifiable-eval verify --cert ./run/certificate.json --trace ./run/trace.jsonl
 ```
 
-Run an evaluation:
-
-```bash
-verifiable-eval run --config eval_config.json --output ./eval_run/
-```
-
-Verify a certificate:
-
-```bash
-verifiable-eval verify --cert ./eval_run/certificate.json --trace ./eval_run/trace.jsonl
-```
-
-Output of verification:
+Verification output:
 
 ```
 Verifying certificate...
-  [PASS] config_hash: Config hash matches: 17feb62f107c...
-  [PASS] chain_integrity: Chain intact (8 entries)
-  [PASS] results_consistency: All 2 axis results consistent
+  [PASS] config_hash: Config hash matches locked configuration
+  [PASS] chain_integrity: Hash chain intact (142 entries, no gaps)
+  [PASS] results_consistency: All 9 axis results consistent with trace
   [PASS] family_overlap: Family overlap declaration accurate: has_overlap=False
 
 VERIFICATION: PASS
 ```
 
-## How It Works
+## Fastest Way To Try It
 
-1. **Configuration commitment**: The evaluation setup (model under test, judge panel, scenarios, rubrics, generation parameters) is serialised to canonical JSON (sorted keys, deterministic) and hashed with SHA-256. The locked configuration is written to disk.
-2. **Execution logging**: Every step — scenario sent, response received, judge decision — is logged as a structured JSONL entry. Each entry's hash includes the previous entry's hash, forming an append-only chain.
-3. **Certificate generation**: After evaluation, the tool computes per-axis statistics (mean, standard deviation, per-judge breakdown), per-judge statistics, inter-judge agreement (pairwise Cohen's kappa, Krippendorff's alpha), family overlap declaration, and disagreement axes. These are bundled into a certificate with the configuration and trace hashes.
-4. **Verification**: The `verify` command runs four checks — config hash recomputation, chain integrity walk, results consistency recomputation from the trace, and family overlap declaration accuracy — and reports PASS or FAIL with details.
+If you just want to test the verification flow from GitHub without making live model calls, use the committed golden files:
+
+```bash
+git clone https://github.com/TimipadoFutureRoots/verifiable-eval
+cd verifiable-eval
+pip install -e .
+
+verifiable-eval verify \
+  --cert goldens/output/certificate.json \
+  --trace goldens/input/trace_clean.jsonl
+```
+
+This should return `VERIFICATION: PASS`.
+
+To see the tamper-evidence check fail, run:
+
+```bash
+verifiable-eval verify \
+  --cert goldens/output/certificate.json \
+  --trace goldens/input/trace_tampered.jsonl
+```
+
+## Running A New Evaluation
+
+Use the sample committed config in [goldens/input/eval_config.json](goldens/input/eval_config.json) as a starting point.
+
+```bash
+verifiable-eval run --config goldens/input/eval_config.json --output ./run
+verifiable-eval verify --cert ./run/certificate.json --trace ./run/trace.jsonl
+```
+
+Notes:
+
+- `--config` accepts JSON and YAML files.
+- `run` writes a committed `config.json`, append-only `trace.jsonl`, and generated `certificate.json` into the output directory.
+- Running a fresh evaluation requires API access for the model under test and the configured judge panel.
+- If you only want to demo the verification mechanism, the golden certificate and traces are enough.
+
+## Output Files
+
+After `verifiable-eval run --config ... --output ./run`, the output directory contains:
+
+- `config.json` — the committed evaluation config envelope with `config_hash` and timestamp
+- `trace.jsonl` — the append-only hash-chained execution trace
+- `certificate.json` — the computed certificate with aggregate stats and verification metadata
+
+Typical workflow:
+
+```bash
+verifiable-eval run --config goldens/input/eval_config.json --output ./run
+verifiable-eval verify --cert ./run/certificate.json --trace ./run/trace.jsonl
+```
+
+## Research Grounding
+
+See [FAMILY_OVERLAP.md](docs/FAMILY_OVERLAP.md) for the attacker-judge role overlap finding, including experimental results showing systematic scoring distortions in same-family evaluation configurations and the DeepSeek strictness finding (cross-family judges producing significantly different severity distributions than same-family judges on identical transcripts).
 
 ## Limitations
 
-- Does not tell you whether an evaluation was well-designed. It tells you whether an evaluation was conducted as described.
+- Verification checks mathematical consistency, not ground truth. A certificate proves the evaluation was conducted as described — it does not prove the evaluation was well-designed.
 - Does not prevent fabrication of an entire evaluation from scratch. It prevents selective modification of a real evaluation after the fact.
-- Does not verify that scoring rubrics are good. It verifies that the declared rubrics were the ones actually used.
-- Does not replace domain expertise. Choosing what to evaluate still requires human judgement.
+- The certificate is only as good as the evaluation rubrics. Poorly designed rubrics produce verified but meaningless scores.
+- LLM-J scores are not deterministic across providers. The same rubric applied by different judge models will produce different scores — this is by design (multi-judge diversity), but means certificates from different judge panels are not directly comparable.
+- Family overlap detection relies on a maintained model family map that may not cover all providers or distinguish fine-tuned variants.
+- Inter-judge agreement metrics (kappa, alpha) require at least two judges and sufficient scenarios to be statistically meaningful.
 - Does not currently run inside a Trusted Execution Environment. The hash chain provides tamper evidence, not tamper prevention.
-- Family overlap detection relies on a known-families map that may not cover all model providers.
-- Inter-judge agreement metrics (kappa, alpha) require at least two judges and sufficient scenarios to be meaningful.
 
-## Roadmap
+## Related Projects
 
-- Trusted Execution Environment integration for hardware-attested evaluation runs
-- Timestamping via external time-stamping authority (RFC 3161)
-- Multi-party verification protocol where evaluator and auditor co-sign
-- Integration with dormancy-detect and sentinel-ai as evaluation axes
-- Public certificate registry for cross-organisation comparison
-- Support for streaming evaluations with incremental certificate updates
+Each tool in this suite currently operates independently. Cross-tool integration (automated pipelines, shared CLI entry points) is planned for a future release but is not yet implemented.
+
+- [sentinel-ai](https://github.com/TimipadoFutureRoots/sentinel-ai) — multi-session relational safety evaluation for affective AI systems
+- [dormancy-detect](https://github.com/TimipadoFutureRoots/dormancy-detect) — temporal attack pattern detection for multi-session AI conversations
 
 ## Citation
 
 ```bibtex
 @software{imomotebegha2025verifiableeval,
   author       = {Imomotebegha, Timipado},
-  title        = {verifiable-eval: Tamper-Evident, Independently Verifiable {AI} Safety Evaluations},
+  title        = {verifiable-eval: Tamper-Evident Safety Certificates for {AI} Evaluation},
   year         = {2025},
-  institution  = {Loughborough University},
+
   url          = {https://github.com/TimipadoFutureRoots/verifiable-eval}
 }
 ```

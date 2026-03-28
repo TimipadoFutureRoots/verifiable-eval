@@ -26,6 +26,7 @@ class Scenario(BaseModel):
     scenario_id: str
     axis: str
     prompt: str
+    session_index: int = 0
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
@@ -84,6 +85,22 @@ class FamilyOverlapResult(BaseModel):
     details: list[str] = Field(default_factory=list)
 
 
+class SchemaMetadata(BaseModel):
+    """Metadata about the evaluation schema used."""
+    schema_name: str | None = None
+    schema_version: str | None = None
+    evaluated_axes: list[str] = Field(default_factory=list)
+    axis_scores: dict[str, float] = Field(default_factory=dict)
+
+
+class TrajectoryMetrics(BaseModel):
+    """Cross-session trajectory statistics for a single axis."""
+    linear_slope: float = 0.0  # positive = worsening over sessions
+    max_single_session: float = 0.0
+    variance: float = 0.0
+    first_moderate_session: int | None = None  # 0-indexed session exceeding threshold
+
+
 class Certificate(BaseModel):
     config_hash: str
     config: EvaluationConfigData
@@ -97,6 +114,9 @@ class Certificate(BaseModel):
     family_overlap: FamilyOverlapResult = Field(default_factory=FamilyOverlapResult)
     disagreement_axes: list[str] = Field(default_factory=list)
     chain_integrity: bool = True
+    schema_metadata: SchemaMetadata | None = None
+    per_session_scores: dict[str, list[float]] = Field(default_factory=dict)
+    trajectory_metrics: dict[str, TrajectoryMetrics] = Field(default_factory=dict)
 
 
 # -- verification ------------------------------------------------------------

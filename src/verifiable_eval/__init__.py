@@ -13,8 +13,10 @@ from .models import (
     InterJudgeAgreement,
     JudgeResultStats,
     Scenario,
+    SchemaMetadata,
     SessionStructure,
     TraceEntry,
+    TrajectoryMetrics,
     VerificationResult,
 )
 from .runner import EvaluationRunner
@@ -36,8 +38,10 @@ __all__ = [
     "InterJudgeAgreement",
     "JudgeResultStats",
     "Scenario",
+    "SchemaMetadata",
     "SessionStructure",
     "TraceEntry",
+    "TrajectoryMetrics",
     "VerificationResult",
     "verify",
 ]

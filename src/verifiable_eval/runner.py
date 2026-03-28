@@ -33,6 +33,9 @@ class EvaluationRunner:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Validate session structure
+        self._validate_sessions()
+
         # Commit config if not already
         config_path = output_dir / "config.json"
         if not self.config.is_committed:
@@ -55,6 +58,21 @@ class EvaluationRunner:
             mut_client.close()
             for client in judge_clients.values():
                 client.close()
+
+    def _validate_sessions(self) -> None:
+        """Validate that scenarios have consistent session structure."""
+        num_sessions = self.config.data.session_structure.num_sessions
+        if num_sessions <= 1:
+            return
+        session_indices = {s.session_index for s in self.config.data.scenarios}
+        expected = set(range(num_sessions))
+        if session_indices != expected:
+            logger.warning(
+                "Session indices %s don't match expected %s for %d sessions",
+                sorted(session_indices),
+                sorted(expected),
+                num_sessions,
+            )
 
     def generate_certificate(self, path: str | Path) -> None:
         """Generate a certificate from the current run."""
@@ -84,6 +102,7 @@ class EvaluationRunner:
             {
                 "scenario_id": scenario.scenario_id,
                 "axis": scenario.axis,
+                "session_index": scenario.session_index,
                 "prompt_hash": prompt_hash,
                 "prompt": scenario.prompt,
             },
@@ -95,6 +114,7 @@ class EvaluationRunner:
             EntryType.RESPONSE_RECEIVED,
             {
                 "scenario_id": scenario.scenario_id,
+                "session_index": scenario.session_index,
                 "response": response,
             },
         )
@@ -113,6 +133,7 @@ class EvaluationRunner:
                 {
                     "scenario_id": scenario.scenario_id,
                     "axis": scenario.axis,
+                    "session_index": scenario.session_index,
                     "judge_model": judge_model,
                     "score": result.score,
                     "reasoning": result.reasoning,
